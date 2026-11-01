@@ -45,6 +45,8 @@
                 color: white;
             }
             
+              /* splash-screen settings */
+            
             .splash-screen {
                 position: fixed;
                 top: 0;
@@ -59,19 +61,11 @@
             }
            
             
-            .splash-screen.display-none {
+            .splash-screen.fade-out{
                 position: fixed;
                 opacity: 0;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100vh;
-                background-color: black;
-                z-index: -10;
-                display: flex;
-                align-items: center;
-                justify-content: center;
                 transition: all 0.5s;
+                pointer-events: none;
             }
             
             @keyframes fadeIn{
@@ -99,6 +93,48 @@
             font-family: verdana;
             font-size: 0.8rem;
             }
+
+            /* shutdown on portal-click transition effect */
+            .shutDown {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: black;
+                
+            z-index: 900;
+            opacity: 0;
+            pointer-events: none;
+            transform: scaleY(1) scaleX(1);
+            transition: all 0.5s;
+            }
+            
+            .shutDown.active {
+                opacity: 1;
+                pointer-events: none;
+           animation:
+               
+        crtCollapseH 0.25s forwards ease-in-out, 
+        crtCollapseV 0.2s forwards ease-in 0.25s,
+        crtFlash 0.15s forwards 0.25s;
+}
+
+/* screen shut down horizontal */
+@keyframes crtCollapseH {
+    to { transform: scaleY(0.004) scaleX(1); }
+}
+
+/* shrinks line sideways into a single tiny point in the center */
+@keyframes crtCollapseV {
+    to { transform: scaleY(0.004) scaleX(0); }
+}
+
+/* flash of grey right as the line squishes */
+@keyframes crtFlash {
+    to { background-color: #dedede; }
+}
+
             
             
             .stage {
@@ -443,8 +479,7 @@
             overflow: scroll;
             max-height: 70px;
             }
-            
-               
+                           
     
         </style>
         
@@ -455,6 +490,8 @@
         <source src="https://www.dropbox.com/scl/fi/hvmjiy7r38besfzzlogbe/Zerofuturism-Everything_Is_Fine.mp3?rlkey=86g8ejg7s9dxxuaza9gkivl20&st=8fs1qjli&raw=1" type="audio/mpeg"> 
         </audio>
         
+        	<audio id="ui-hover-sound" preload="auto"><source src="images/ui_hover.mp3" type="audio/mpeg"></audio>
+        
           <!-- enter screen -->  
         <div class="splash-screen">
         <div class="fadeIn"> <h2>enter?</h2>
@@ -462,7 +499,7 @@
             </div>
         </div>
         
-
+        
           <!-- backdrop SECTION -->  
          <div class="background-set">
              
@@ -483,14 +520,14 @@
             <h2>The sphere</h2>
         <p>select a story to explore, hover for synopsis</p>
             <div class="selection">
-        <div class= "select-container"><div class="selecter"><a href="crewindex.html">the crew</a></div>
+        <div class= "select-container"><div class="selecter"><a href="crewindex.html" class="selecter">the crew</a></div>
                 <div class="desc">In a world where paranormal is met with a push back, the hunted become hunters. This group has one aim: take down the organization that has persecuted them from the start. </div>
                 </div>
        <div class= "select-container"> <a href="wildkidsindex.html" class="selecter">wildkids</a>
                 <div class="desc">A yellowjackets twist: An all girls and all boys soccer team on their way to nationals end up in catastrophe, when their plane crashes in the canadian wilderness.
            They must then survive, and after a good while, try not killing each other. </div>
                 </div>
-         <div class= "select-container"> <a href="runnersindex.html">the runners</a>
+         <div class= "select-container"> <a href="runnersindex.html" class="selecter">the runners</a>
                  <div class="desc">Coming soon.</div></div>
                 
                 </div>
@@ -523,69 +560,123 @@
       
             </div>
             
+                <div class="shutDown"></div>
+            
             </main>
         
         
          <!-- SCRIPT SECTION -->  
-         <!-- splash screen + music autoplay on user click -->  
+        
+        
+         <!-- typeScript plugin -->  
+        <script src="https://unpkg.com"></script>
+        <!-- splash screen + music autoplay on user click AND hover audio -->  
         <script>
             
-             const splash = document.querySelector('.splash-screen');
-            const disclaimer = document.querySelector ('.disclaimer');
-             var audioToPlay = document.getElementById("menu-music");
-             
-             audioToPlay.volume = 0.2; 
-            
-        
-                // listens for a click anywhere on the page
-            splash.addEventListener('click', function splashScreenClick() {
-                
-    audioToPlay.play()
-        .then(() => {
-            // once audio plays, remove the listener so it doesn't trigger again on the next click
-            splash.removeEventListener('click', splashScreenClick);
-        })
-        .catch(error => {
-            console.log("Audio playback failed:", error);
+    // waits until the HTML structure is loaded to keep it safe
+    document.addEventListener("DOMContentLoaded", function() {
+
+    // all variables listed here
+    const hoverAudio = document.getElementById('ui-hover-sound');  // id element - hover audio
+    const menuMusic = document.getElementById('menu-music'); // id element - music loop audio
+    const splash = document.querySelector('.splash-screen'); // html + css class - splash-screen
+    const shutDownPage = document.querySelector('.shutDown'); // html + css class - shut down animation
+    const disclaimer = document.querySelector('.disclaimer'); // html + css class - disclaimer element
+    const portals = document.querySelectorAll('a.selecter');  // html + css class - selector element
+
+    if (menuMusic) {
+        menuMusic.volume = 0.2;
+    }
+
+    // event listener for portal link hover
+    portals.forEach(portal => {
+        portal.addEventListener('mouseenter', function() {
+            if (hoverAudio) {
+                hoverAudio.currentTime = 0; // rewinds track to 0
+                hoverAudio.play().catch(err => {
+                    console.log("Hover sound playback stalled:", err);
+                });
+            }
         });
-        
-             splash.classList.add('display-none');
-          
-            // starts the 5-second countdown right after the click
-    setTimeout(() => {
-        if (disclaimer) {
-            disclaimer.classList.add('active');
+    });
+
+    // splash screen 
+    function startScreen() {
+        // force unlock the hover audio alongside the menu music
+        if (hoverAudio) {
+            hoverAudio.play().then(() => {
+                hoverAudio.pause(); 
+                hoverAudio.currentTime = 0;
+            }).catch(() => {});
         }
-    }, 5000); // 5000ms = so delays 5 seconds
-       
-            })
+
+        if (menuMusic) {
+            menuMusic.play().catch(error => 
+            console.log("Music blocked:", error));
+        }
+
+        if (splash) {
+            splash.classList.add('fade-out');  // adds fade-out class to splash element aka screen-splash class 
+            splash.removeEventListener('click', startScreen);
+        }
         
-             
-        </script>
-         <!-- Typewriter plugin + script for splash screen -->  
-        <script src="https://unpkg.com/typeit@8.8.7/dist/index.umd.js"></script>
-        <script>
-		new TypeIt("#multipleStrings", {
-  speed: 150,
-  waitUntilVisible: false,
-  startDelay: 3500
-})
-            .type("click on the screen to start.")
-            .break()
-            .break()
-            .pause(500)
-            .type("autoplay advised.")
-            .go();
-	</script>
-       <!-- disclaimer script code! -->  
-        <script>
-      
-    let disclaimerBox = document.querySelector(".disclaimerBox");
+        setTimeout(() => {
+            if (disclaimer) {
+                disclaimer.classList.add('active');  // adds active class to disclaimer element! 
+            }
+        }, 5000);  // delays 5 secs
+    }
+    
+    if (splash) {
+        splash.addEventListener('click', startScreen);
+    }
+
+ // for portal link clicks -> sets page shutdown animation 
+    portals.forEach(portal => {
+        let shutDownPlay = false;
+        
+        portal.addEventListener('click', function(event) {
+            if (!shutDownPlay && shutDownPage) {
+                event.preventDefault(); 
                 
-    function showDisclaimer() {
+                setTimeout(() => {
+                    shutDownPage.classList.add('active');
+                    shutDownPlay = true; 
+                    
+                    setTimeout(() => {
+                        portal.click(); 
+                    }, 700);
+                
+                }, 2000);  // delays 2 secs  
+            }
+        });
+    });
+
+  // typescript for splash screen, go back up for plugin jquery tehe
+    new TypeIt("#multipleStrings", {
+        speed: 150,
+        waitUntilVisible: false,
+        startDelay: 3500
+    })
+    .type("click on the screen to start.")
+    .break()
+    .break()
+    .pause(500)
+    .type("autoplay advised.")
+    .go();
+});
+
+// disclaimer function block, ffuhhinally
+function showDisclaimer() {
+    let disclaimerBox = document.querySelector(".disclaimerBox");
+    if (disclaimerBox) {
         disclaimerBox.classList.toggle("open");
     }
-        </script>
+}
+            
+</script>
+
+        
         
     </body>
 </html>
